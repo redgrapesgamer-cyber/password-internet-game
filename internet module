@@ -1,0 +1,445 @@
+Need:
+  lcd
+  wires
+  pot
+  piezo
+  buttons
+  capacitor 100uf
+  battery / laptop
+  wires
+  Arduino R4 WiFi (recommended)
+  10k AND 250ohm resistors (for the piezo will make less volume)
+  
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include "WiFiS3.h"
+#include <SPI.h>
+
+#include <LiquidCrystal.h>
+
+#define MyNetwork // your network
+#define MyPassword // your password
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2); //whatever pins
+
+char ssid[] = MyNetwork;        // your network SSID (name)
+char pass[] = MyPassword;    // your network password (use for WPA, or use as key for WEP)
+int status = WL_IDLE_STATUS;
+int password;
+
+bool thief = false;
+bool correct = false;
+bool alreadyConnected = false;
+bool button_pressed = false;
+bool confronting = false;
+bool lcdCleared = false;
+bool passwordGuessed = false;
+
+
+bool confronted = false;
+
+short int piezo = 7;
+int pot = A0;
+short int enter_button = 9;
+short int clear_button = 10;
+
+
+WiFiServer server(80); 
+
+
+
+
+
+    // the WiFi radio's status
+
+void setup() {
+  //Initialize serial and wait for port to open:
+
+  pinMode(enter_button, INPUT);
+  pinMode(clear_button, INPUT);
+
+
+
+  Serial.begin(9600);
+
+  analogReadResolution(12);
+
+  lcd.begin(16, 2);
+  
+  lcd.print("Connecting");
+
+  
+  
+
+
+  // internet
+
+
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
+  // check for the WiFi module:
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println("Communication with WiFi module failed!");
+    // don't continue
+    while (true);
+  }
+
+  String fv = WiFi.firmwareVersion();
+  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
+    Serial.println("Please upgrade the firmware");
+  }
+
+  // attempt to connect to WiFi network:
+  while (status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to WPA SSID: ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network:
+    status = WiFi.begin(ssid, pass);
+
+    // wait 10 seconds for connection:
+    delay(5000);
+  }
+
+  // you're connected now, so print out the data:
+  Serial.print("You're connected to the network");
+  lcd.clear();
+  lcd.print("CONNECTED!");
+  printCurrentNet();
+  printWifiData();
+  server.begin();
+
+  printCurrentNet();
+  lcd.clear();
+
+  
+}
+
+void loop() {
+  // check the network connection once every 10 seconds:
+  
+  WiFiClient client = server.available();
+    
+    
+  if (!confronted) {
+    
+    lcd.setCursor(0, 0);
+    lcd.print("YOU CAN GO IN");
+  }
+
+    // setup website
+    
+    
+  if (client.connected() && client && confronted == false) {
+        
+            
+            
+        
+            client.println("<p style=\"font-size:3vw;\">Welcome To The Password Society<br></p>");
+            client.println();
+            client.println();
+            delay(1000);
+            client.print("<p style=\"font-size:3vw;\">THE PASSWORD IS :<br></p>");
+            
+            password = random(10000, 99999);
+            delay(1000);
+            client.println(password);
+            delay(1000);
+            client.println("<p style=\"font-size:2vw;\">CONFRONTING IN THREE SECONDS<br></p>");
+            delay(3000);
+            client.println("<h1 style='color: red;'>CONFRONTED</h1>");
+            if (thief == true) {
+              client.println("<h1 style='color: red;'>A THIEF IN RED HAS BEEN SEEN - GET HIM CAUGHT</h1>");
+              thief = false;
+
+            }
+
+            if (correct == true) {
+              client.println("<h1 style='color: green;'>CORRECT PASSWORD - VICTIM DISMISSED</h1>");
+              correct = false;
+            }
+            delay(1000);
+
+            client.println("<p style=\"font-size:2vw;\">TO CONFRONT AGAIN, RELOAD. WARNING THE PASSWORD WILL CHANGE<br></p>");
+            
+
+            client.stop();
+            // add it to the end of the currentLine
+            Serial.println("Successfully Confronted. Now Transferring To The LCD");
+            confronted = true;
+      
+        }
+
+  
+
+  if (confronted == true && confronting == false) {
+    CONFRONT();
+  }
+
+        
+
+
+
+    
+
+
+
+}
+
+    void CONFRONT() {
+      
+     
+      
+      confronting = true; 
+      lcd.clear();
+      
+      
+      
+      int pot_val = (analogRead(pot));
+      pot_val = map(pot_val, 0, 4095, 0, 9);
+      
+      tone(piezo, 200, 500);
+      lcd.print("What's The Code?");
+      delay(2000);
+      lcd.clear();
+
+      lcd.setCursor(0, 0);
+
+      char current_char = '/0';
+      String current_guess = "";
+      String prev_guess = "";
+
+      while (!passwordGuessed) {
+        
+        
+        
+        
+        
+        
+        
+        pot_val = analogRead(pot);
+        pot_val = map(pot_val, 0, 4095, 0, 9);
+        if (digitalRead(enter_button) == HIGH && current_guess.length() < 5){
+          
+          delay(300);
+            if (digitalRead(enter_button) == HIGH) {
+              current_guess = current_guess + current_char;
+              lcd.print(current_char);
+              delay(300);
+            }
+           
+            
+        } else if (digitalRead(enter_button) == LOW && current_guess.length() < 5){
+          
+        
+          switch (pot_val) {
+            case 0:
+            
+            current_char = '0';
+            if (current_char != '0') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 1:
+            current_char = '1';
+            if (current_char != '1') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 2:
+            current_char = '2';
+            if (current_char != '2') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 3:
+            current_char = '3';
+            if (current_char != '3') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 4:
+            current_char = '4';
+            if (current_char != '4') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 5:
+            current_char = '5';
+            if (current_char != '5') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 6:
+              current_char = '6';
+              if (current_char != '6') {
+                  lcd.clear();
+                  lcd.print(current_guess + current_char);
+            }
+            break;
+            case 7:
+            current_char = '7';
+            if (current_char != '7') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 8:
+            current_char = '8';
+            if (current_char != '8') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+            case 9:
+            current_char = '9';
+            if (current_char != '9') {
+                lcd.clear();
+                lcd.print(current_guess + current_char);
+            }
+            break;
+
+          }
+
+          if (digitalRead(clear_button) == HIGH && current_guess.length() > 0) {
+                current_guess = "";
+                lcd.clear();
+        
+
+      }
+      } else if (digitalRead(enter_button) == HIGH && current_guess.length() == 5) {
+        passwordGuessed = true;
+      }
+
+
+      
+
+
+      }
+
+      lcd.clear();
+      lcd.print("The Password Is");
+      lcd.setCursor(0,1);
+      int new_current_guess = current_guess.toInt();
+
+      if (new_current_guess == password) {
+        lcd.print("CORRECT!");
+        delay(2000);
+        lcd.clear();
+        correct = true;
+        
+        
+      } else {
+        lcd.print("WRONG YOU THEIF");
+        for (int i = 0; i<5; i++) {
+            tone(piezo, 300, 100);
+            delay(100);
+            tone(piezo, 600, 100);
+            delay(100);
+        }
+
+        thief = true;
+        
+
+      }
+
+      lcd.clear();
+
+      confronting = false;
+      confronted = false;
+
+      return;
+
+        
+        
+    }
+
+    
+
+    
+    
+    
+        //client.flush();
+        
+        
+    
+    
+
+  
+  
+  
+
+
+void printWifiData() {
+  // print your board's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  
+  Serial.println(ip);
+
+  // print your MAC address:
+  byte mac[6];
+  WiFi.macAddress(mac);
+  Serial.print("MAC address: ");
+  printMacAddress(mac);
+
+  Serial.println("If not working, check your network. Make sure it is connected to BigBrainsWiFi_Guest!");
+}
+
+void printCurrentNet() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print the MAC address of the router you're attached to:
+  byte bssid[6];
+  WiFi.BSSID(bssid);
+  Serial.print("BSSID: ");
+  printMacAddress(bssid);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.println(rssi);
+
+  // print the encryption type:
+  byte encryption = WiFi.encryptionType();
+  Serial.print("Encryption Type:");
+  Serial.println(encryption, HEX);
+  Serial.println();
+}
+
+void printMacAddress(byte mac[]) {
+  for (int i = 0; i < 6; i++) {
+    if (i > 0) {
+      Serial.print(":");
+    }
+    if (mac[i] < 16) {
+      Serial.print("0");
+    }
+    Serial.print(mac[i], HEX);
+  }
+  Serial.println();
+}
